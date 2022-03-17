@@ -6,8 +6,9 @@ put melons in a shopping cart.
 Authors: Joel Burton, Christian Fernandez, Meggie Mahnken, Katie Byers.
 """
 
-from flask import Flask, render_template, redirect, flash, session
+from flask import Flask, render_template, redirect, flash, session, request
 import jinja2
+import customers
 
 
 
@@ -42,7 +43,7 @@ def list_melons():
 
     melon_list = melons.get_all()
     return render_template("all_melons.html",
-                           melon_list=melon_list)
+                    melon_list=melon_list)
 
 
 @app.route("/melon/<melon_id>")
@@ -55,7 +56,7 @@ def show_melon(melon_id):
     melon = melons.get_by_id(melon_id)
     print(melon)
     return render_template("melon_details.html",
-                           display_melon=melon)
+                    display_melon=melon)
 
 
 @app.route("/cart")
@@ -67,14 +68,13 @@ def show_shopping_cart():
     # The logic here will be something like:
     order_total = 0
     
-     # - create a list to hold melon objects and a variable to hold the total
+    # - create a list to hold melon objects and a variable to hold the total
     #   cost of the order
     melons_in_cart = []
     
     # - get the cart dictionary from the session
     cart = session.get("cart", {})
     
-   
     
     # - loop over the cart dictionary, and for each melon id:
     for melon_id, quantity in cart.items():
@@ -98,14 +98,11 @@ def show_shopping_cart():
     # Make sure your function can also handle the case wherein no cart has
     # been added to the session
 
-   
-
 
 @app.route("/add_to_cart/<melon_id>")
 def add_to_cart(melon_id):
     """Add a melon to cart and redirect to shopping cart page.
 
-   
     When a melon is added to the cart, redirect browser to the shopping cart
     page and display a confirmation message: 'Melon successfully added to
     cart'."""
@@ -150,21 +147,31 @@ def process_login():
     dictionary, look up the user, and store them in the session.
     """
 
-    # TODO: Need to implement this!
+    email = request.form.get('email')
+    password = request.form.get('password')
 
-    # The logic here should be something like:
-    #
-    # - get user-provided name and password from request.form
-    # - use customers.get_by_email() to retrieve corresponding Customer
-    #   object (if any)
-    # - if a Customer with that email was found, check the provided password
-    #   against the stored one
-    # - if they match, store the user's email in the session, flash a success
-    #   message and redirect the user to the "/melons" route
-    # - if they don't, flash a failure message and redirect back to "/login"
-    # - do the same if a Customer with that email doesn't exist
+    user = customers.get_by_email(email)
 
-    return "Oops! This needs to be implemented"
+    if not user:
+        flash("No such email address.")
+        return redirect('/login')
+
+    if user.password != password:
+        flash("Incorrect password.")
+        return redirect("/login")
+
+    session["logged_in_customer_email"] = user.email
+    flash("Logged in.")
+    return redirect("/melons")
+
+
+@app.route("/logout")
+def process_logout():
+    """Log user out."""
+
+    del session["logged_in_customer_email"]
+    flash("Logged out.")
+    return redirect("/melons")
 
 
 @app.route("/checkout")
@@ -179,4 +186,4 @@ def checkout():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0")
+    app.run(debug=True, host='0.0.0.0')
